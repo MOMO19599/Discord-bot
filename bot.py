@@ -988,7 +988,10 @@ async def dice(
         k=1,
     )[0]
 
-    rolled = random.randint(1, 6)
+    if outcome == "win":
+        rolled = number
+    else:
+        rolled = random.choice([n for n in range(1, 7) if n != number])
 
     if outcome == "neutral":
 
