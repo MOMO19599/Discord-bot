@@ -342,15 +342,6 @@ class GuardedCommandTree(app_commands.CommandTree):
 
         command_name = command.name
 
-        if command_name in GAME_COMMANDS:
-            if interaction.channel_id not in GAME_CHANNEL_IDS:
-                if not interaction.response.is_done():
-                    await interaction.response.send_message(
-                        "❌ You can only use this command in the designated game channels.",
-                        ephemeral=True,
-                    )
-                return False
-
         if command_name in UNVERIFIED_ALLOWED_COMMANDS:
             return True
 
@@ -2678,9 +2669,11 @@ async def create_ticket(interaction, ticket_type, amount_text):
 
     title = f"{ticket_label(ticket_type)} Ticket"
     description = (
-        "Please provide the deposit details below."
+        "Please provide the deposit details below.\n"
+        "⏳ **Please wait for a staff member to respond.**"
         if ticket_type == "deposit"
-        else "Please provide the withdrawal details below."
+        else "Please provide the withdrawal details below.\n"
+        "⏳ **Please wait for a staff member to respond.**"
     )
 
     embed = discord.Embed(
@@ -2745,11 +2738,6 @@ async def create_ticket(interaction, ticket_type, amount_text):
     amount="Amount to deposit, such as 100k, 1m, 25m, or 1b",
 )
 async def deposit(interaction: discord.Interaction, amount: str):
-    if interaction.channel_id != DEPOSIT_CHANNEL_ID:
-        return await interaction.response.send_message(
-            f"❌ You can only use `/deposit` in <#{DEPOSIT_CHANNEL_ID}>.",
-            ephemeral=True,
-        )
     await create_ticket(interaction, "deposit", amount)
 
 
@@ -2765,11 +2753,6 @@ async def deposit(interaction: discord.Interaction, amount: str):
     amount="Amount to withdraw, such as 100k, 1m, 25m, or 1b",
 )
 async def withdraw(interaction: discord.Interaction, amount: str):
-    if interaction.channel_id != WITHDRAW_CHANNEL_ID:
-        return await interaction.response.send_message(
-            f"❌ You can only use `/withdraw` in <#{WITHDRAW_CHANNEL_ID}>.",
-            ephemeral=True,
-        )
     await create_ticket(interaction, "withdrawal", amount)
 
 
