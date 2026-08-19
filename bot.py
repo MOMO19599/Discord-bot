@@ -2339,6 +2339,15 @@ def ticket_code(ticket_type: str, ticket_id: int) -> str:
 def ticket_overwrites(guild, member):
     overwrites = {
         guild.default_role: discord.PermissionOverwrite(view_channel=False),
+        guild.me: discord.PermissionOverwrite(
+            view_channel=True,
+            send_messages=True,
+            read_message_history=True,
+            attach_files=True,
+            embed_links=True,
+            manage_channels=True,
+            manage_messages=True,
+        ),
         member: discord.PermissionOverwrite(
             view_channel=True,
             send_messages=True,
