@@ -1056,11 +1056,7 @@ async def dice(
 # MINES
 # ============================================================
 
-MINES_DIFFICULTY = {
-    1: {"per_tile_multiplier": 0.5, "bomb_chance": 30},
-    2: {"per_tile_multiplier": 1.25, "bomb_chance": 50},
-    3: {"per_tile_multiplier": 1.75, "bomb_chance": 64},
-}
+MINES_HOUSE_EDGE = 0.97
 
 
 class MinesView(discord.ui.View):
@@ -1069,7 +1065,7 @@ class MinesView(discord.ui.View):
         self,
         user_id,
         bet,
-        difficulty,
+        num_mines,
     ):
 
         super().__init__(
@@ -1078,9 +1074,11 @@ class MinesView(discord.ui.View):
 
         self.user_id = user_id
         self.bet = bet
-        self.difficulty = difficulty
-        self.per_tile_multiplier = MINES_DIFFICULTY[difficulty]["per_tile_multiplier"]
-        self.bomb_chance = MINES_DIFFICULTY[difficulty]["bomb_chance"]
+        self.num_mines = num_mines
+        self.total_tiles = 24
+        self.bomb_positions = set(
+            random.sample(range(self.total_tiles), num_mines)
+        )
         self.opened = 0
         self.finished = False
         self.current_multiplier = 1.0
@@ -1145,7 +1143,7 @@ class MinesView(discord.ui.View):
                     ephemeral=True,
                 )
 
-            hit_bomb = random.randint(1, 100) <= self.bomb_chance
+            hit_bomb = index in self.bomb_positions
 
             if hit_bomb:
 
@@ -1173,19 +1171,21 @@ class MinesView(discord.ui.View):
                     view=self,
                 )
 
+            remaining_tiles = self.total_tiles - self.opened
             self.opened += 1
 
             button.label = "💎"
             button.style = discord.ButtonStyle.success
             button.disabled = True
 
-            self.current_multiplier *= self.per_tile_multiplier
+            safe_probability = (remaining_tiles - self.num_mines) / remaining_tiles
+            self.current_multiplier *= (1 / safe_probability) * MINES_HOUSE_EDGE
 
             self.current_payout = int(
                 self.bet * self.current_multiplier
             )
 
-            if self.opened == 24:
+            if self.opened == self.total_tiles - self.num_mines:
 
                 self.finished = True
 
@@ -1226,7 +1226,7 @@ class MinesView(discord.ui.View):
             await interaction.response.edit_message(
                 content=(
                     "💣 **MINES**\n"
-                    f"Difficulty: `{self.difficulty}`\n"
+                    f"Mines: `{self.num_mines}`\n"
                     f"Safe tiles: `{self.opened}`\n"
                     f"Multiplier: "
                     f"`{self.current_multiplier:.2f}x`\n"
@@ -1306,19 +1306,12 @@ class MinesView(discord.ui.View):
 )
 @app_commands.describe(
     amount="Minimum 1m",
-    difficulty="Choose a difficulty",
-)
-@app_commands.choices(
-    difficulty=[
-        app_commands.Choice(name="1 — x0.5 per safe tile", value=1),
-        app_commands.Choice(name="2 — x1.25 per safe tile", value=2),
-        app_commands.Choice(name="3 — x1.75 per safe tile", value=3),
-    ]
+    mines="How many mines (1-23)",
 )
 async def mines(
     interaction: discord.Interaction,
     amount: str,
-    difficulty: app_commands.Choice[int],
+    mines: app_commands.Range[int, 1, 23],
 ):
 
     try:
@@ -1344,7 +1337,7 @@ async def mines(
             ephemeral=True,
         )
 
-    difficulty_value = difficulty.value
+    num_mines = mines
 
     change_gems(
         interaction.user.id,
@@ -1357,17 +1350,15 @@ async def mines(
         games_played=1,
     )
 
-    per_tile = MINES_DIFFICULTY[difficulty_value]["per_tile_multiplier"]
-
     await interaction.response.send_message(
         "💣 **MINES**\n"
         f"Bet: `{format_gems(bet)}`\n"
-        f"Difficulty: `{difficulty_value}` (x{per_tile} per safe tile)\n"
+        f"Mines: `{num_mines}`\n"
         "Safe tiles show 💎. Bombs show 💣.",
         view=MinesView(
             interaction.user.id,
             bet,
-            difficulty_value,
+            num_mines,
         ),
     )
 
