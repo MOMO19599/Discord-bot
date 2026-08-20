@@ -264,6 +264,22 @@ async def is_owner(interaction: discord.Interaction):
         return interaction.user.id in OWNER_IDS
 
 
+TICKET_STAFF_ROLE_NAME = "main mod"
+
+
+def has_ticket_staff_role(member) -> bool:
+    return isinstance(member, discord.Member) and any(
+        role.name == TICKET_STAFF_ROLE_NAME for role in member.roles
+    )
+
+
+async def is_ticket_staff(interaction: discord.Interaction) -> bool:
+    if await is_owner(interaction):
+        return True
+
+    return has_ticket_staff_role(interaction.user)
+
+
 # ============================================================
 # ROBLOX VERIFICATION
 # ============================================================
@@ -2369,6 +2385,15 @@ def ticket_overwrites(guild, member):
                 manage_messages=True,
             )
 
+    staff_role = discord.utils.get(guild.roles, name=TICKET_STAFF_ROLE_NAME)
+    if staff_role:
+        overwrites[staff_role] = discord.PermissionOverwrite(
+            view_channel=True,
+            send_messages=True,
+            read_message_history=True,
+            manage_messages=True,
+        )
+
     return overwrites
 
 
@@ -2382,9 +2407,9 @@ class TicketView(discord.ui.View):
         style=discord.ButtonStyle.success,
     )
     async def approve(self, interaction, button):
-        if not await is_owner(interaction):
+        if not await is_ticket_staff(interaction):
             return await interaction.response.send_message(
-                "❌ Owner only.", ephemeral=True
+                "❌ Staff only.", ephemeral=True
             )
 
         row = db.execute(
@@ -2477,9 +2502,9 @@ class TicketView(discord.ui.View):
         style=discord.ButtonStyle.danger,
     )
     async def reject(self, interaction, button):
-        if not await is_owner(interaction):
+        if not await is_ticket_staff(interaction):
             return await interaction.response.send_message(
-                "❌ Owner only.", ephemeral=True
+                "❌ Staff only.", ephemeral=True
             )
 
         row = db.execute(
@@ -2536,9 +2561,9 @@ class TicketView(discord.ui.View):
             )
 
         is_ticket_owner = interaction.user.id == row["user_id"]
-        if not is_ticket_owner and not await is_owner(interaction):
+        if not is_ticket_owner and not await is_ticket_staff(interaction):
             return await interaction.response.send_message(
-                "❌ Only the ticket creator or an owner can close this ticket.",
+                "❌ Only the ticket creator or staff can close this ticket.",
                 ephemeral=True,
             )
 
