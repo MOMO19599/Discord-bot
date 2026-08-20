@@ -2475,7 +2475,7 @@ class TicketView(discord.ui.View):
             user_mention = member.mention if member else f"<@{row['user_id']}>"
 
             await interaction.channel.send(
-                f"📩 {user_mention}, please wait for staff to contact you."
+                "📩 Please wait for staff to contact you."
             )
         else:
             member = interaction.guild.get_member(row["user_id"])
